@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="미니 코스피200 선물 투자 계산기 - 투자한도, 가능계약수, 계약수 배분 자동 계산"/>
+  <base href="/calculator/"/>
+  <title>투자 계산기</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f0f2f5;
+      font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 36px 16px 80px;
+    }
+
+    .app { width: 100%; max-width: 560px; }
+
+    h1 {
+      text-align: center;
+      font-size: 30px;
+      font-weight: 800;
+      color: #111;
+      margin-bottom: 28px;
+      letter-spacing: -0.5px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 26px 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    /* Editable inputs */
+    input[type="number"] {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1.8px solid #e2e5ea;
+      border-radius: 11px;
+      font-size: 16px;
+      color: #111;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+
+    /* Read-only computed fields */
+    .result-box {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1.8px solid #e8eaed;
+      border-radius: 11px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a1a2e;
+      background: #f5f7fa;
+      letter-spacing: -0.2px;
+    }
+
+    /* Price row */
+    .price-row { position: relative; }
+    .price-row input[type="number"] { padding-right: 54px; }
+
+    .refresh-btn {
+      position: absolute;
+      right: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: #3b82f6;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      user-select: none;
+      line-height: 1;
+    }
+    .refresh-btn:hover  { background: #2563eb; }
+    .refresh-btn:active { background: #1d4ed8; }
+    .refresh-btn .ico   { display: inline-block; }
+    .refresh-btn.spinning .ico { animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .price-note {
+      font-size: 11.5px;
+      margin-top: 6px;
+      color: #9aa0ad;
+      min-height: 17px;
+    }
+    .price-note.ok      { color: #16a34a; }
+    .price-note.err     { color: #dc2626; }
+    .price-note.loading { color: #6366f1; }
+
+    /* Source badge */
+    .src-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #3b82f6;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .src-badge:hover { background: #dbeafe; }
+
+    .divider {
+      height: 1px;
+      background: #f0f2f5;
+      margin: 4px 0 18px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #b0b6c2;
+      margin-top: 5px;
+    }
+
+    /* ── RYG ── */
+    .ryg-card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 26px 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+    .ryg-title {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 800;
+      color: #222;
+      margin-bottom: 18px;
+      letter-spacing: -0.3px;
+    }
+    .ryg-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .ryg-lbl {
+      border-radius: 11px;
+      padding: 15px 10px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 2px;
+    }
+    .lbl-r { background: #dc2626; }
+    .lbl-y { background: #d97706; }
+    .lbl-g { background: #16a34a; }
+
+    .ryg-val {
+      background: #f5f7fa;
+      border: 1.8px solid #e8eaed;
+      border-radius: 11px;
+      padding: 13px 10px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 800;
+      color: #1a1a2e;
+    }
+
+    /* ── 총투자금액 ── */
+    .total-card {
+      background: #16a34a;
+      border-radius: 18px;
+      padding: 24px 22px;
+      box-shadow: 0 3px 12px rgba(22,163,74,0.28);
+    }
+    .total-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 10px;
+    }
+    .total-val {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 11px;
+      font-size: 19px;
+      font-weight: 800;
+      color: #16a34a;
+      background: rgba(255,255,255,0.93);
+      letter-spacing: -0.3px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 11px;
+      color: #c0c5ce;
+    }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <h1>투자 계산기</h1>
+
+  <!-- ① 입력 -->
+  <div class="card">
+    <div class="field">
+      <label>계좌잔고 (억원)</label>
+      <input type="number" id="balance" placeholder="계좌잔고를 입력하세요" step="0.01" min="0" inputmode="decimal" oninput="calc()"/>
+    </div>
+    <div class="field">
+      <label>Coefficient</label>
+      <input type="number" id="coeff" placeholder="계수를 입력하세요" step="0.01" min="0" inputmode="decimal" oninput="calc()"/>
+    </div>
+  </div>
+
+  <!-- ② 계산 결과 -->
+  <div class="card">
+    <div class="field">
+      <label>투자한도</label>
+      <div class="result-box" id="limitBox">0 원</div>
+      <div class="hint">= 계좌잔고(억) × 계수</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label>약정가 (미니 코스피200 선물)</label>
+      <a class="src-badge"
+         href="https://markets.hankyung.com/indices/kospi-future"
+         target="_blank" rel="noopener">
+        📈 한경코리아마켓 바로가기
+      </a>
+      <div class="price-row">
+        <input type="number" id="price" value="300.00" step="0.01" min="0"
+               inputmode="decimal" oninput="calc()" placeholder="약정가 직접 입력"/>
+        <button class="refresh-btn" id="refreshBtn" onclick="fetchPrice()" title="현재가 새로고침">
+          <span class="ico">↻</span>
+        </button>
+      </div>
+      <div class="price-note" id="priceNote">↻ 버튼으로 현재가 자동조회 · 또는 직접 입력</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label>가능계약수</label>
+      <div class="result-box" id="contractsBox">0 계약</div>
+      <div class="hint">= 투자한도 ÷ (약정가 × 50,000원)</div>
+    </div>
+  </div>
+
+  <!-- ③ 계약수 배분 -->
+  <div class="ryg-card">
+    <div class="ryg-title">계약수 배분</div>
+    <div class="ryg-grid">
+      <div class="ryg-lbl lbl-r">R</div>
+      <div class="ryg-lbl lbl-y">Y</div>
+      <div class="ryg-lbl lbl-g">G</div>
+      <div class="ryg-val" id="rBox">0</div>
+      <div class="ryg-val" id="yBox">0</div>
+      <div class="ryg-val" id="gBox">0</div>
+    </div>
+    <div class="hint" style="text-align:center;margin-top:10px;">
+      R × 30% &nbsp;|&nbsp; Y × 30% &nbsp;|&nbsp; G × 40% &nbsp; (합계 = 가능계약수)
+    </div>
+  </div>
+
+  <!-- ④ 총투자금액 -->
+  <div class="total-card">
+    <div class="total-label">총투자금액</div>
+    <div class="total-val" id="totalBox">0 원</div>
+  </div>
+
+  <div class="footer">
+    <p>데이터 출처: <a href="https://markets.hankyung.com/indices/kospi-future" target="_blank" rel="noopener">한경코리아마켓</a></p>
+    <p style="margin-top:4px;">본 계산기는 투자 참고용이며, 실제 투자 결과와 다를 수 있습니다.</p>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+/* ═══════════════════════════════════════
+   계산 로직
+═══════════════════════════════════════ */
+function calc() {
+  const balance   = parseFloat(document.getElementById('balance').value) || 0;
+  const coeff     = parseFloat(document.getElementById('coeff').value)   || 0;
+  const price     = parseFloat(document.getElementById('price').value)   || 0;
+
+  // 투자한도 (원)
+  const limit = balance * 1e8 * coeff;
+
+  // 가능계약수 (정수)
+  const unitVal   = price * 50000;
+  const contracts = unitVal > 0 ? Math.floor(limit / unitVal) : 0;
+
+  // 배분: R=30%, Y=30%, G=나머지(합계 보장)
+  const r = Math.floor(contracts * 0.3);
+  const y = Math.floor(contracts * 0.3);
+  const g = contracts - r - y;
+
+  // 총투자금액
+  const total = price * contracts * 50000;
+
+  setText('limitBox',     fmt(limit) + ' 원');
+  setText('contractsBox', contracts.toLocaleString('ko-KR') + ' 계약');
+  setText('rBox',         r.toLocaleString('ko-KR'));
+  setText('yBox',         y.toLocaleString('ko-KR'));
+  setText('gBox',         g.toLocaleString('ko-KR'));
+  setText('totalBox',     fmt(total) + ' 원');
+}
+
+function fmt(n)        { return Math.round(n).toLocaleString('ko-KR'); }
+function setText(id,v) { document.getElementById(id).textContent = v; }
+
+/* ═══════════════════════════════════════
+   한경코리아마켓 현재가 자동조회
+   대상: https://markets.hankyung.com/indices/kospi-future
+═══════════════════════════════════════ */
+async function fetchPrice() {
+  const btn  = document.getElementById('refreshBtn');
+  const note = document.getElementById('priceNote');
+
+  btn.classList.add('spinning');
+  setNote(note, '한경코리아마켓에서 현재가를 불러오는 중...', 'loading');
+
+  const TARGET = 'https://markets.hankyung.com/indices/kospi-future';
+
+  // CORS 우회 프록시 (순서대로 시도)
+  const PROXIES = [
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://thingproxy.freeboard.io/fetch/${u}`,
+  ];
+
+  let price = null;
+
+  for (const mkProxy of PROXIES) {
+    if (price) break;
+    try {
+      const res = await fetch(mkProxy(TARGET), {
+        signal: AbortSignal.timeout(9000),
+        headers: { 'Accept': 'text/html' }
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      price = parsePrice(html);
+    } catch (_) { /* 다음 프록시 */ }
+  }
+
+  if (price && price > 0) {
+    document.getElementById('price').value = price.toFixed(2);
+    setNote(note, `✓ 현재가 ${price.toFixed(2)} pt 업데이트 완료  (${nowStr()})`, 'ok');
+    calc();
+  } else {
+    setNote(note, '⚠ 자동 조회 실패 — 위 링크에서 확인 후 직접 입력해 주세요', 'err');
+  }
+
+  btn.classList.remove('spinning');
+}
+
+/* ─────────────────────────────────────
+   HTML 파싱: 코스피200 선물 현재가 추출
+   한경 페이지 구조 기반 (100 ~ 2000 pt 범위 검증)
+───────────────────────────────────── */
+function parsePrice(html) {
+  // 1) __NEXT_DATA__ JSON 탐색 (Next.js SSR 데이터)
+  try {
+    const m = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (m) {
+      const json = JSON.parse(m[1]);
+      const v = deepFind(json, ['close','currentPrice','closePrice','lastPrice','price','last','nav'], 0);
+      if (v) return v;
+    }
+  } catch (_) {}
+
+  // 2) HTML 속성 패턴: data-price, data-value 등
+  const attrMatch = html.match(/data-(?:price|value|close)="([\d]+\.[\d]{1,2})"/i);
+  if (attrMatch) {
+    const v = parseFloat(attrMatch[1]);
+    if (inRange(v)) return v;
+  }
+
+  // 3) 클래스 기반 패턴 (한경 price 관련 클래스)
+  const classMatch = html.match(/class="[^"]*(?:price|current|close)[^"]*"[^>]*>([\d,]+\.[\d]{1,2})</i);
+  if (classMatch) {
+    const v = parseFloat(classMatch[1].replace(/,/g, ''));
+    if (inRange(v)) return v;
+  }
+
+  // 4) 순수 텍스트에서 XXX.XX ~ XXXX.XX 패턴 (범위 필터)
+  const all = [...html.matchAll(/\b(\d{3,4}\.\d{2})\b/g)];
+  for (const m of all) {
+    const v = parseFloat(m[1]);
+    if (inRange(v)) return v;
+  }
+
+  return null;
+}
+
+// 재귀 키 탐색
+function deepFind(obj, keys, depth) {
+  if (depth > 12 || !obj || typeof obj !== 'object') return null;
+  for (const k of Object.keys(obj)) {
+    if (keys.includes(k.toLowerCase ? k.toLowerCase() : k)) {
+      const v = parseFloat(obj[k]);
+      if (!isNaN(v) && inRange(v)) return v;
+    }
+    const found = deepFind(obj[k], keys, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function inRange(v) { return !isNaN(v) && v > 100 && v < 2000; }
+
+function setNote(el, msg, type) {
+  el.textContent = msg;
+  el.className   = 'price-note' + (type ? ' ' + type : '');
+}
+
+function nowStr() {
+  return new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+// 초기 실행
+calc();
+</script>
+</body>
+</html>
